@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<?php 
+	require 'validator.php';
+	require_once 'admin/conn.php'
+?>
+<html lang="en">
+
+<head>
+    <title>Gestor Archivos</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="admin/css/bootstrap.css" />
+    <link rel="stylesheet" type="text/css" href="admin/css/jquery.dataTables.css" />
+    <link rel="stylesheet" type="text/css" href="admin/css/style.css" />
+</head>
+
+<body>
+    <nav class="navbar navbar-default navbar-fixed-top" style="background-color:#ead443;"><a class="navbar-brand"
+            href="index.php" style="blackgroud-color:#000100;">Volver Login</a><button
+            class="btn btn-link btn-sm order-1 order-lg-0" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+        <!-- Navbar Search-->
+    </nav>
+
+    <div class="col-md-4">
+        <?php
+			$query = mysqli_query($conn, "SELECT * FROM `user1` WHERE `user1_id` = '$_SESSION[user1]'") or die(mysqli_error());
+			$fetch = mysqli_fetch_array($query);
+		?>
+        <div class="panel panel-default" style="background-color:#393f4d;" id="panel-margin">
+            <div class="panel-heading" style="background-color:#feda6a;">
+                <center>
+                    <h2 class="panel-title" style="color:black;">Datos Usuario</h2>
+                </center>
+            </div>
+            <div class="panel-body">
+                <h4 style="color:#fff;"><label class="pull-center"># Usuario: </label><label
+                        class="pull-right"><?php echo $fetch['user1_no']?></label>
+                </h4>
+                <h4 style="color:#fff;"><label class="pull-center">Nombre & Apellido: </label><label
+                        class="pull-right"><?php echo $fetch['user1_firstname']." ".$fetch['user1_lastname']?></label>
+                </h4>
+                </h4>
+                <center>
+                    <h3 style="color:#fff;">Carga de Archivo</h3>
+                </center><br>
+                <form method="POST" enctype="multipart/form-data" action="save_file.php">
+                    <center><input type="file" name="file" size="4" style="background-color:#fff;"
+                            required="required" /></center>
+                    <br />
+                    <input type="hidden" name="user1_no" value="<?php echo $fetch['user1_no']?>" />
+                    <button class="btn btn-success btn-sm" name="save"><span class="glyphicon glyphicon-plus"></span>
+                        Agregar Archivo</button>
+                </form>
+                <br style="clear:both;" />
+                <button class="btn btn-danger pull-right" data-toggle="modal" data-target="#modal_confirm"><span
+                        class="glyphicon glyphicon-log-out"></span> Cerrar Sesion</button>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="panel panel-default" style="margin-top:100px;">
+            <div class="panel-body">
+                <table id="table" class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Nombre de Archivo</th>
+                            <th>Tipo</th>
+                            <th>Fecha de subida</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+							$user1_no = $fetch['user1_no'];
+							$query = mysqli_query($conn, "SELECT * FROM `storage` WHERE `user1_no` = '$user1_no'") or die(mysqli_error());
+							while($fetch = mysqli_fetch_array($query)){
+						?>
+                        <tr class="del_file<?php echo $fetch['store_id']?>">
+                            <td><?php echo substr($fetch['filename'], 0 ,30)."..."?></td>
+                            <td><?php echo $fetch['file_type']?></td>
+                            <td><?php echo $fetch['date_uploaded']?></td>
+                            <td><a href="download.php?store_id=<?php echo $fetch['store_id']?>"
+                                    class="btn btn-success"><span class="glyphicon glyphicon-download"></span>
+                                    Descargar</a> | <button class="btn btn-danger btn_remove" type="button"
+                                    id="<?php echo $fetch['store_id']?>"><span class="glyphicon glyphicon-trash"></span>
+                                    Eliminar</button>
+                            </td>
+                        </tr>
+                        <?php
+							}
+						?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <center>
+        <div id="footer">
+            <label class="footer-title">&copy; Innovent Software
+                <?php echo date("Y", strtotime("+8 HOURS"))?></label>
+        </div>
+    </center>
+    <div class="modal fade" id="modal_confirm" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <center>
+                        <h4 class="text-danger">¿Estas seguro en cerrar sesion?</h4>
+                    </center>
+                </div>
+                <div class="modal-footer">
+                    <a type="button" class="btn btn-danger" data-dismiss="modal">Cancelar</a>
+                    <a href="logout.php" class="btn btn-success">Continuar</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="modal_remove" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <center>
+                        <h4 class="text-danger">¿Estás seguro de que quieres eliminar este archivo?</h4>
+                    </center>
+                </div>
+                <div class="modal-footer">
+                    <a type="button" class="btn btn-danger" data-dismiss="modal">No</a>
+                    <button type="button" class="btn btn-success" id="btn_yes">Si</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php include 'script.php'?>
+    <script type="text/javascript">
+    $(document).ready(function() {
+        $('.btn_remove').on('click', function() {
+            var store_id = $(this).attr('id');
+            $("#modal_remove").modal('show');
+            $('#btn_yes').attr('name', store_id);
+        });
+
+        $('#btn_yes').on('click', function() {
+            var id = $(this).attr('name');
+            $.ajax({
+                type: "POST",
+                url: "remove_file.php",
+                data: {
+                    store_id: id
+                },
+                success: function(data) {
+                    $("#modal_remove").modal('hide');
+                    $(".del_file" + id).empty();
+                    $(".del_file" + id).html(
+                        "<td colspan='4'><center class='text-danger'>Eliminando</center></td>"
+                    );
+                    setTimeout(function() {
+                        $(".del_file" + id).fadeOut('slow');
+                    }, 1000);
+                }
+            });
+        });
+    });
+    </script>
+</body>
+
+</html>
